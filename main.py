@@ -1,6 +1,23 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Request
+from fastapi.responses import JSONResponse
+from aiogram import Bot, Dispatcher
 from pydantic import BaseModel
 from typing import Optional, Annotated
+from contextlib import asynccontextmanager
+
+TELEGRAM_TOKEN = '8351097187:AAHIx9HU7FLOA2Dm3kGb0ZA_5D-Qax6vFg8'
+
+bot = Bot(token=TELEGRAM_TOKEN)
+storage = MemoryStorage()
+dp = Dispatcher(bot, storage=storage)
+
+
+
+
+@asynccontextmanager
+async lifespan(FastAPI):
+
+
 
 app = FastAPI()
 
