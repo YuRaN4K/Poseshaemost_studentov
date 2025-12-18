@@ -1,17 +1,15 @@
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy import Column, Integer, String, create_engine
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, Session
+from typing import List, Optional, Dict, Any
 
-# Database configurations
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
+engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-
-# SQLAlchemy models
 class Item(Base):
     __tablename__ = "items"
     id = Column(Integer, primary_key=True, index=True)
@@ -19,11 +17,15 @@ class Item(Base):
     date = Column(String, index=True)
     description = Column(String, index=True)
 
-
 Base.metadata.create_all(bind=engine)
-
-# FastAPI main
 app = FastAPI()
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 # Endpoints:
@@ -70,28 +72,27 @@ async def delete_item(item_id: int):
 
 
 # Read all IDs grouped by date or filtered by date
-@app.get("/items/ids/by-date")
-async def read_ids_by_date(date: str = None):
-    db = SessionLocal()
-    try:
-        if date:
-            # Возвращает список ID только для конкретной даты
-            items = db.query(Item.id).filter(Item.date == date).all()
-            # Преобразуем список кортежей [(1,), (2,)] в плоский список [1, 2]
-            return {date: [item[0] for item in items]}
-        
-        # Если дата не указана, возвращаем все существующие пары Дата: [ID, ID...]
-        all_items = db.query(Item.id, Item.date).all()
+@app.get("/items/info/by-date")
+async def read_items_info_by_date(date: Optional[str] = None, db: Session = Depends(get_db)):
+
+    if date:
+        # Если дата указана: возвращаем плоский список [{}, {}]
+        items = db.query(Item.name, Item.description).filter(Item.date == date).all()
+        return [{"name": item.name, "description": item.description} for item in items]
+    else:
+        # Если дата не указана то выводится все даты
+        all_items = db.query(Item.name, Item.description, Item.date).all()
         result = {}
-        for item_id, item_date in all_items:
+        for item_name, item_description, item_date in all_items:
             if item_date not in result:
                 result[item_date] = []
-            result[item_date].append(item_id)
+            result[item_date].append({
+                "name": item_name,
+                "description": item_description
+            })
         return result
-    finally:
-        db.close()
 
 
 
 if __name__ == "__main__":
-    uvicorn.run(app)
+    uvicorn.run(app, host="127.0.0.1", port=8000)
