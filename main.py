@@ -1,57 +1,70 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from typing import Optional, List
+import uvicorn
+from fastapi import FastAPI
+from sqlalchemy import Column, Integer, String, create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
+# Database configurations
+SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+
+# SQLAlchemy models
+class Item(Base):
+    __tablename__ = "items"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True)
+    description = Column(String, index=True)
+
+
+Base.metadata.create_all(bind=engine)
+
+# FastAPI app instance
 app = FastAPI()
 
-# Модель данных для заметки
-class Item(BaseModel):
-    id: Optional[int] = None
-    name: str
-    completed: bool = False
-    description: Optional[str] = None
-    
 
-# Имитация бд в оперативке
-db = [
-    {"id": 1, "name": "Имя студента","completed": False, "description": "причина неявки"}
-]
+# CRUD operations
+# Create (Create)
+@app.post("/items/")
+async def create_item(name: str, description: str):
+    db = SessionLocal()
+    db_item = Item(name=name, description=description)
+    db.add(db_item)
+    db.commit()
+    db.refresh(db_item)
+    return db_item
 
-# 1. READ (Получить список всех элементов)
-@app.get("/items", response_model=List[Item])
-def get_items():
-    return db
 
-# CREATE (Добавить новый элемент)
-@app.post("/items", response_model=Item)
-def create_item(item: Item):
-    item.id = len(db) + 1
-    db.append(item.dict())
+# Read (GET)
+@app.get("/items/{item_id}")
+async def read_item(item_id: int):
+    db = SessionLocal()
+    item = db.query(Item).filter(Item.id == item_id).first()
     return item
 
-# READ (Получить один элемент по ID)
-@app.get("/items/{item_id}", response_model=Item)
-def get_item(item_id: int):
-    for item in db:
-        if item["id"] == item_id:
-            return item
-    raise HTTPException(status_code=404, detail="Item not found")
 
-# UPDATE (Обновить существующий элемент)
-@app.put("/items/{item_id}", response_model=Item)
-def update_item(item_id: int, updated_item: Item):
-    for index, item in enumerate(db):
-        if item["id"] == item_id:
-            updated_item.id = item_id
-            db[index] = updated_item.dict()
-            return updated_item
-    raise HTTPException(status_code=404, detail="Item not found")
+# Update (PUT)
+@app.put("/items/{item_id}")
+async def update_item(item_id: int, name: str, description: str):
+    db = SessionLocal()
+    db_item = db.query(Item).filter(Item.id == item_id).first()
+    db_item.name = name
+    db_item.description = description
+    db.commit()
+    return db_item
 
-# DELETE (Удалить элемент)
+
+# Delete (DELETE)
 @app.delete("/items/{item_id}")
-def delete_item(item_id: int):
-    for index, item in enumerate(db):
-        if item["id"] == item_id:
-            db.pop(index)
-            return {"message": f"Item {item_id} deleted successfully"}
-    raise HTTPException(status_code=404, detail="Item not found")
+async def delete_item(item_id: int):
+    db = SessionLocal()
+    db_item = db.query(Item).filter(Item.id == item_id).first()
+    db.delete(db_item)
+    db.commit()
+    return {"message": "Item deleted successfully"}
+
+
+if __name__ == "__main__":
+    uvicorn.run(app)
