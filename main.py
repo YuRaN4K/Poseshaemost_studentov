@@ -75,10 +75,6 @@ async def delete_item(item_id: int):
 # Read all IDs grouped by date or filtered by date
 @app.get("/items/all/by-dates")
 async def read_items_by_dates(date: Optional[str] = None, db: Session = Depends(get_db)):
-    """
-    Возвращает словарь данных, отсортированный по датам, 
-    содержащий только 'name' и 'description' для каждой записи.
-    """
     # Запрашиваем из базы только name, description и date
     query = db.query(Item.name, Item.description, Item.date)
 
