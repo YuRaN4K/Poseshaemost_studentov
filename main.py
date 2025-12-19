@@ -33,6 +33,12 @@ def get_db():
 
 # Endpoints:
 
+# html визуалка связка глав страницы
+@app.get("/", response_class=HTMLResponse)
+async def read_index():
+    with open("index.html", "r", encoding="utf-8") as f:
+        return f.read()
+
 # Create
 @app.post("/items/")
 async def create_item(name: str,date: str ,description: str, subject: str ,db: Session = Depends(get_db)):
