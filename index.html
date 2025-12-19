@@ -27,5 +27,58 @@
         </div>
     </div>
 
+    <hr>
+
+    <button onclick="loadItems()">Обновить список</button>
+    <div id="itemsList"></div>
+
+    <script>
+        const API_URL = 'http://127.0.0.1:8000';
+
+        // Создание задачи
+        async function createItem() {
+            const name = document.getElementById('name').value;
+            const date = document.getElementById('date').value;
+            const description = document.getElementById('description').value;
+            const subject = document.getElementById('subject').value;
+
+            const url = `${API_URL}/items/?name=${encodeURIComponent(name)}&date=${encodeURIComponent(date)}&description=${encodeURIComponent(description)}&subject=${encodeURIComponent(subject)}`;
+            
+            await fetch(url, { method: 'POST' });
+            loadItems(); // Обновляем список
+        }
+
+        // Загрузка и отображение всех задач (сгруппированных по датам)
+        async function loadItems() {
+            const response = await fetch(`${API_URL}/items/all/by-dates`);
+            const data = await response.json();
+            
+            const listDiv = document.getElementById('itemsList');
+            listDiv.innerHTML = '';
+
+            for (const date in data) {
+                const dateHeader = document.createElement('div');
+                dateHeader.className = 'date-header';
+                dateHeader.innerText = `Дата: ${date}`;
+                listDiv.appendChild(dateHeader);
+
+                data[date].forEach(item => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'item-card';
+                    itemDiv.innerHTML = `
+                        <strong>${item.name}</strong><br>
+                        <small>${item.description}</small>
+                        <small>—</small>
+                        <small>${item.subject}</small>
+                    `;
+                    listDiv.appendChild(itemDiv);
+                });
+            }
+        }
+
+        // Загружает данные когда я запускаю сайт
+        loadItems();
+    </script>
+
 </body>
 </html>
