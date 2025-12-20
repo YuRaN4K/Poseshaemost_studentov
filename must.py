@@ -59,10 +59,8 @@ def callback_massege(callback):
                         'telegram_id': chat_id,
                         'telegram_name': call.from_user.username or call.from_user.first_name,
                         'name': user_info['name'],
-                        'age': user_info['age'],
-                        'city': user_info['city'],
-                        'phone': user_info['phone'],
-                        'email': user_info['email']
+                        'prot': user_info['prot'],
+                        'tpred': user_info['pred'],
                     }
         
                     save_data(data)
